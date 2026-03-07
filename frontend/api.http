@@ -1,0 +1,305 @@
+# ============================================================
+# FormFlow API — Tests
+# ============================================================
+# Utilise REST Client (extension VS Code) pour exécuter
+# Variables : remplace TOKEN et IDs après chaque requête
+# ============================================================
+
+@baseUrl = http://localhost:3000/api
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjMjkxZThiNi00YzhjLTRiYWMtYTFmOS02NDI0MTMwNzE1YjQiLCJpYXQiOjE3NzI4OTgzMTQsImV4cCI6MTc3MzUwMzExNH0.v6de6A5iVh038WUsSOrgTklhp7RThVSu5V8omIP-pp0
+@formId = ca904b2d-a039-4e63-a62d-50c21ae6afe3
+@questionId = 2773d0fc-58ee-4377-b7db-00020139f753
+@responseId = 38193a85-6a8a-484b-832f-f07e46a74748
+@formToken = 0c232219-30b3-458c-a309-b8eb43e2a5a5
+
+
+# ============================================================
+# CHAPITRE 1 — AUTH
+# ============================================================
+
+
+
+
+### 1.1 Inscription
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Prof Dupont",
+  "email": "prof@test.com",
+  "password": "password123"
+}
+
+###
+
+### 1.2 Connexion
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "prof@test.com",
+  "password": "password123"
+}
+
+###
+
+### 1.3 Mon profil
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{token}}
+
+###
+
+### 1.4 Modifier mon profil
+PUT {{baseUrl}}/auth/me
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Prof Martin"
+}
+
+###
+
+### 1.5 Changer mot de passe
+PUT {{baseUrl}}/auth/password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "currentPassword": "password123",
+  "newPassword": "newpassword456"
+}
+
+###
+
+### 1.6 Logout
+POST {{baseUrl}}/auth/logout
+Authorization: Bearer {{token}}
+
+###
+
+
+# ============================================================
+# CHAPITRE 2 — FORMULAIRES
+# ============================================================
+
+### 2.1 Créer un formulaire (avec questions)
+POST {{baseUrl}}/forms
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Évaluation du cours de Maths",
+  "description": "Formulaire de fin de chapitre",
+  "questions": [
+    {
+      "type": "yes_no",
+      "label": "Avez-vous compris le cours ?",
+      "required": true,
+      "order": 0
+    },
+    {
+      "type": "multiple_choice",
+      "label": "Quelle partie était la plus difficile ?",
+      "options": ["Algèbre", "Géométrie", "Probabilités", "Aucune"],
+      "required": true,
+      "order": 1
+    },
+    {
+      "type": "rating",
+      "label": "Notez la clarté du cours de 1 à 5",
+      "required": true,
+      "order": 2
+    },
+    {
+      "type": "open",
+      "label": "Qu'est-ce qui pourrait être amélioré ?",
+      "required": false,
+      "order": 3
+    }
+  ]
+}
+
+###
+
+### 2.2 Liste de mes formulaires
+GET {{baseUrl}}/forms
+Authorization: Bearer {{token}}
+
+###
+
+### 2.3 Détail d'un formulaire
+GET {{baseUrl}}/forms/{{formId}}
+Authorization: Bearer {{token}}
+
+###
+
+### 2.4 Modifier un formulaire
+PUT {{baseUrl}}/forms/{{formId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Évaluation du cours de Maths — V2",
+  "description": "Formulaire mis à jour"
+}
+
+###
+
+### 2.5 Ouvrir / Fermer un formulaire
+PATCH {{baseUrl}}/forms/{{formId}}/toggle
+Authorization: Bearer {{token}}
+
+###
+
+### 2.6 Supprimer un formulaire
+DELETE {{baseUrl}}/forms/{{formId}}
+Authorization: Bearer {{token}}
+
+###
+
+
+# ============================================================
+# CHAPITRE 2 — QUESTIONS
+# ============================================================
+
+### 2.7 Ajouter une question
+POST {{baseUrl}}/forms/{{formId}}/questions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "type": "multiple_choice",
+  "label": "Quel est votre niveau en maths ?",
+  "options": ["Débutant", "Intermédiaire", "Avancé"],
+  "required": true
+}
+
+###
+
+### 2.8 Modifier une question
+PUT {{baseUrl}}/forms/{{formId}}/questions/{{questionId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "label": "Quel est votre niveau actuel en maths ?",
+  "options": ["Débutant", "Intermédiaire", "Avancé", "Expert"]
+}
+
+###
+
+### 2.9 Réordonner les questions
+PUT {{baseUrl}}/forms/{{formId}}/questions/reorder
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "questions": [
+    { "id": "QUESTION_ID_1", "order": 0 },
+    { "id": "QUESTION_ID_2", "order": 1 },
+    { "id": "QUESTION_ID_3", "order": 2 }
+  ]
+}
+
+###
+
+### 2.10 Supprimer une question
+DELETE {{baseUrl}}/forms/{{formId}}/questions/{{questionId}}
+Authorization: Bearer {{token}}
+
+###
+
+
+# ============================================================
+# CHAPITRE 3 — RÉPONSES ÉLÈVES (routes publiques)
+# ============================================================
+
+### 3.1 Récupérer le formulaire public (vue élève)
+GET {{baseUrl}}/respond/{{formToken}}
+
+###
+
+### 3.2 Soumettre des réponses (élève)
+POST {{baseUrl}}/respond/{{formToken}}
+Content-Type: application/json
+
+{
+  "answers": [
+    {
+      "questionId": "7a38b570-b43e-4534-b494-00fb631c7191",
+      "value": true
+    },
+    {
+      "questionId": "522d53f2-d90a-458f-a325-2622b98f3c87",
+      "value": "Algèbre"
+    },
+    {
+      "questionId": "2773d0fc-58ee-4377-b7db-00020139f753",
+      "value": 4
+    },
+    {
+      "questionId": "6f904349-bf41-4e1a-ac8e-30f4c6ee61b1",
+      "value": "Le cours allait trop vite sur la partie théorique"
+    }
+  ]
+}
+
+###
+
+
+# ============================================================
+# CHAPITRE 3 — RÉPONSES (routes prof)
+# ============================================================
+
+### 3.3 Liste toutes les réponses d'un formulaire
+GET {{baseUrl}}/forms/{{formId}}/responses
+Authorization: Bearer {{token}}
+
+###
+
+### 3.4 Détail d'une réponse
+GET {{baseUrl}}/forms/{{formId}}/responses/{{responseId}}
+Authorization: Bearer {{token}}
+
+###
+
+### 3.5 Supprimer une réponse
+DELETE {{baseUrl}}/forms/{{formId}}/responses/{{responseId}}
+Authorization: Bearer {{token}}
+
+###
+
+
+# ============================================================
+# CHAPITRE 4 — ANALYTICS
+# ============================================================
+
+### 4.1 Analytics globales du formulaire
+GET {{baseUrl}}/forms/{{formId}}/analytics
+Authorization: Bearer {{token}}
+
+###
+
+### 4.2 Analytics d'une question spécifique
+GET {{baseUrl}}/forms/{{formId}}/analytics/{{questionId}}
+Authorization: Bearer {{token}}
+
+###
+
+
+# ============================================================
+# CHAPITRE 5 — IA (Groq)
+# ============================================================
+
+### 5.1 Insights globaux sur le formulaire
+GET {{baseUrl}}/forms/{{formId}}/insights
+Authorization: Bearer {{token}}
+
+###
+
+### 5.2 Analyse d'une question ouverte
+GET {{baseUrl}}/forms/{{formId}}/insights/6f904349-bf41-4e1a-ac8e-30f4c6ee61b1
+Authorization: Bearer {{token}}
+
+###
