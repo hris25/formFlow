@@ -1,5 +1,3 @@
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -39,6 +37,7 @@
     --sidebar-border: oklch(0.92 0.01 270);
     --sidebar-ring: oklch(0.55 0.22 265);
   }
+
   .dark {
     --background: oklch(0.12 0.02 270);
     --foreground: oklch(0.95 0.01 270);
@@ -72,15 +71,19 @@
     --sidebar-border: oklch(0.25 0.02 270);
     --sidebar-ring: oklch(0.70 0.20 265);
   }
+
   .theme {
     --font-sans: var(--font-sans)
   }
+
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-ring;
   }
+
   body {
     @apply bg-background text-foreground antialiased;
   }
+
   html {
     @apply font-sans scroll-smooth;
   }
@@ -90,13 +93,16 @@
 .scrollbar-thin::-webkit-scrollbar {
   width: 6px;
 }
+
 .scrollbar-thin::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .scrollbar-thin::-webkit-scrollbar-thumb {
   background: hsl(var(--muted-foreground) / 0.2);
   border-radius: 3px;
 }
+
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground) / 0.35);
 }
