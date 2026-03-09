@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, use } from 'react'
+import { useEffect, useState, use, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -33,6 +33,29 @@ const answerSchema = z.object({
 
 type AnswerFormData = z.infer<typeof answerSchema>
 
+function ProgressBar({ current, total }: { current: number; total: number }) {
+  const progress = total > 0 ? Math.round((current / total) * 100) : 0
+
+  return (
+    <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-lg border-b px-4 py-3">
+      <div className="max-w-lg mx-auto">
+        <div className="flex items-center justify-between text-sm mb-2">
+          <span className="text-muted-foreground">
+            {current} sur {total} question{total > 1 ? 's' : ''}
+          </span>
+          <span className="font-semibold text-primary">{progress}%</span>
+        </div>
+        <div className="h-2 rounded-full bg-muted overflow-hidden">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-primary to-accent transition-all duration-500 ease-out"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function YesNoInput({
   value,
   onChange,
@@ -48,8 +71,8 @@ function YesNoInput({
         className={cn(
           'flex-1 py-3 px-4 rounded-xl border-2 transition-all duration-200 flex items-center justify-center gap-2 font-medium',
           value === true
-            ? 'border-green-500 bg-green-500 text-white'
-            : 'border-muted bg-muted/50 hover:border-green-500/50'
+            ? 'border-green-500 bg-green-500 text-white shadow-lg shadow-green-500/25'
+            : 'border-muted bg-muted/50 hover:border-green-500/50 hover:bg-green-500/5'
         )}
       >
         <Check className="h-5 w-5" /> Oui
@@ -60,8 +83,8 @@ function YesNoInput({
         className={cn(
           'flex-1 py-3 px-4 rounded-xl border-2 transition-all duration-200 flex items-center justify-center gap-2 font-medium',
           value === false
-            ? 'border-red-500 bg-red-500 text-white'
-            : 'border-muted bg-muted/50 hover:border-red-500/50'
+            ? 'border-red-500 bg-red-500 text-white shadow-lg shadow-red-500/25'
+            : 'border-muted bg-muted/50 hover:border-red-500/50 hover:bg-red-500/5'
         )}
       >
         <X className="h-5 w-5" /> Non
@@ -78,17 +101,19 @@ function RatingInput({
   onChange: (value: number) => void
 }) {
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-2 justify-center">
       {[1, 2, 3, 4, 5].map((n) => (
         <button
           key={n}
           type="button"
           onClick={() => onChange(n)}
           className={cn(
-            'h-12 w-12 rounded-xl text-lg font-semibold transition-all duration-200',
-            value === n
-              ? 'bg-primary text-primary-foreground scale-110 shadow-lg'
-              : 'bg-muted hover:bg-muted/80'
+            'h-14 w-14 rounded-xl text-lg font-semibold transition-all duration-200',
+            value !== undefined && n <= value
+              ? 'bg-primary text-primary-foreground scale-105 shadow-lg shadow-primary/30'
+              : value === n
+                ? 'bg-primary text-primary-foreground scale-110 shadow-lg shadow-primary/30'
+                : 'bg-muted hover:bg-muted/80 hover:scale-105'
           )}
         >
           {n}
@@ -119,8 +144,8 @@ function MultipleChoiceInput({
           className={cn(
             'w-full py-3 px-4 rounded-xl border-2 text-left transition-all duration-200 flex items-center gap-3',
             selectedValue === option
-              ? 'border-primary bg-primary/10 text-primary'
-              : 'border-muted bg-muted/50 hover:border-primary/50'
+              ? 'border-primary bg-primary/10 text-primary shadow-sm'
+              : 'border-muted bg-muted/50 hover:border-primary/50 hover:bg-primary/5'
           )}
         >
           <div
@@ -230,7 +255,6 @@ export default function RespondPage({ params }: { params: Promise<{ token: strin
       try {
         const response = await getPublicForm(resolvedParams.token)
         setForm(response.data)
-        // Initialize answers array
         setValue(
           'answers',
           response.data.questions.map((q: Form['questions'][0]) => ({
@@ -253,6 +277,12 @@ export default function RespondPage({ params }: { params: Promise<{ token: strin
     fetchForm()
   }, [resolvedParams.token, setValue])
 
+  const answeredCount = useMemo(() => {
+    return (answers || []).filter(
+      (a) => a.value !== undefined && a.value !== '' && a.value !== null
+    ).length
+  }, [answers])
+
   const updateAnswer = (questionId: string, value: any) => {
     const currentAnswers = answers || []
     const newAnswers = currentAnswers.map((a) =>
@@ -266,7 +296,6 @@ export default function RespondPage({ params }: { params: Promise<{ token: strin
   }
 
   const onSubmit = async (data: AnswerFormData) => {
-    // Validate required questions
     if (form) {
       for (const question of form.questions) {
         if (question.required) {
@@ -325,10 +354,13 @@ export default function RespondPage({ params }: { params: Promise<{ token: strin
   const sortedQuestions = [...form.questions].sort((a, b) => a.order - b.order)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4 pb-24">
-      <div className="max-w-lg mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
+      {/* Progress bar */}
+      <ProgressBar current={answeredCount} total={sortedQuestions.length} />
+
+      <div className="max-w-lg mx-auto p-4 pb-24">
         {/* Header */}
-        <div className="text-center py-8 animate-fade-in">
+        <div className="text-center py-6 animate-fade-in">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary text-white mb-4 shadow-lg shadow-primary/30">
             <FileText className="w-7 h-7" />
           </div>
@@ -341,7 +373,7 @@ export default function RespondPage({ params }: { params: Promise<{ token: strin
         {/* Questions */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {sortedQuestions.map((question, index) => (
-            <Card key={question.id} className="border-0 shadow-lg">
+            <Card key={question.id} className="border-0 shadow-lg hover:shadow-xl transition-shadow">
               <CardContent className="pt-6">
                 <QuestionCard
                   question={question}
@@ -353,12 +385,12 @@ export default function RespondPage({ params }: { params: Promise<{ token: strin
             </Card>
           ))}
 
-          {/* Submit button - fixed at bottom on mobile */}
+          {/* Submit button */}
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-lg border-t lg:static lg:bg-transparent lg:border-0 lg:backdrop-blur-none">
             <Button
               type="submit"
               size="lg"
-              className="w-full h-12 text-base"
+              className="w-full h-12 text-base shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30"
               disabled={isSubmitting}
             >
               {isSubmitting ? (

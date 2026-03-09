@@ -17,11 +17,15 @@ import {
   Eye,
   Edit2,
   Loader2,
+  ChevronRight,
+  Calendar,
+  Brain,
 } from 'lucide-react'
-import { getForm, toggleForm } from '@/lib/api'
-import { Form } from '@/types'
+import { getForm, getResponses, toggleForm } from '@/lib/api'
+import { Form, Response } from '@/types'
 import { AdminLayout } from '@/components/layout'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -38,7 +42,7 @@ const questionTypeLabels: Record<string, string> = {
 
 function QuestionPreview({ question, index }: { question: Form['questions'][0]; index: number }) {
   return (
-    <div className="p-4 rounded-lg bg-muted/50 space-y-3">
+    <div className="p-4 rounded-lg bg-muted/50 space-y-3 animate-slide-up" style={{ animationDelay: `${index * 60}ms` }}>
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium">Q{index + 1}</span>
         <Badge variant="secondary">{questionTypeLabels[question.type]}</Badge>
@@ -101,7 +105,7 @@ function QRCodeTab({ form }: { form: Form }) {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col items-center">
-          <div className="p-4 bg-white rounded-xl shadow-inner">
+          <div className="p-6 bg-white rounded-2xl shadow-inner">
             <QRCodeSVG value={link} size={200} level="H" />
           </div>
           <p className="text-sm text-muted-foreground mt-4 text-center">
@@ -126,32 +130,105 @@ function QRCodeTab({ form }: { form: Form }) {
               <Copy className="h-4 w-4" />
             </Button>
           </div>
-          <a href={link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 w-full">
-              <ExternalLink className="h-4 w-4 mr-2" /> Ouvrir le formulaire
-            </a>
+          <a href={link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 w-full transition-colors">
+            <ExternalLink className="h-4 w-4 mr-2" /> Ouvrir le formulaire
+          </a>
         </CardContent>
       </Card>
     </div>
   )
 }
 
-// Need to import Input
-import { Input } from '@/components/ui/input'
+function ResponsesPreviewTab({ formId, responses }: { formId: string; responses: Response[] }) {
+  const router = useRouter()
+
+  return (
+    <Card className="border-0 shadow-sm">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users className="h-5 w-5" /> Réponses récentes
+            </CardTitle>
+            <CardDescription>{responses.length} réponse{responses.length > 1 ? 's' : ''} au total</CardDescription>
+          </div>
+          <Link
+            href={`/forms/${formId}/responses`}
+            className="inline-flex items-center justify-center rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors"
+          >
+            Voir toutes <ChevronRight className="h-4 w-4 ml-1" />
+          </Link>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {responses.length === 0 ? (
+          <div className="text-center py-8">
+            <Users className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground">Aucune réponse pour le moment</p>
+          </div>
+        ) : (
+          <div className="divide-y">
+            {responses.slice(0, 5).map((response, index) => {
+              const summary = response.answers
+                .slice(0, 2)
+                .map((a) => {
+                  if (a.question?.type === 'yes_no') return a.value === true ? 'Oui' : 'Non'
+                  if (a.question?.type === 'rating') return `${a.value}/5`
+                  if (typeof a.value === 'string' && a.value.length > 30) return a.value.slice(0, 30) + '…'
+                  return String(a.value)
+                })
+                .join(' • ')
+
+              return (
+                <div
+                  key={response.id}
+                  className="flex items-center gap-3 py-3 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors cursor-pointer"
+                  onClick={() => router.push(`/forms/${formId}/responses`)}
+                >
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                    #{index + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm truncate">{summary || 'Réponse'}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(response.submittedAt).toLocaleDateString('fr-FR', {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
 
 export default function FormDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params)
   const router = useRouter()
   const searchParams = useSearchParams()
   const [form, setForm] = useState<Form | null>(null)
+  const [responses, setResponses] = useState<Response[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   const activeTab = searchParams.get('tab') || 'preview'
 
   useEffect(() => {
-    const fetchForm = async () => {
+    const fetchData = async () => {
       try {
-        const response = await getForm(resolvedParams.id)
-        setForm(response.data)
+        const [formRes, responsesRes] = await Promise.all([
+          getForm(resolvedParams.id),
+          getResponses(resolvedParams.id).catch(() => ({ data: [] })),
+        ])
+        setForm(formRes.data)
+        setResponses(responsesRes.data)
       } catch (error) {
         toast.error('Erreur lors du chargement')
         router.push('/dashboard')
@@ -159,7 +236,7 @@ export default function FormDetailPage({ params }: { params: Promise<{ id: strin
         setIsLoading(false)
       }
     }
-    fetchForm()
+    fetchData()
   }, [resolvedParams.id, router])
 
   const handleToggle = async () => {
@@ -178,6 +255,11 @@ export default function FormDetailPage({ params }: { params: Promise<{ id: strin
       <AdminLayout title="Chargement...">
         <div className="space-y-4">
           <Skeleton className="h-8 w-48" />
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Skeleton className="h-24" />
+            <Skeleton className="h-24" />
+            <Skeleton className="h-24" />
+          </div>
           <Skeleton className="h-64 w-full" />
         </div>
       </AdminLayout>
@@ -185,8 +267,6 @@ export default function FormDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   if (!form) return null
-
-  const link = `${typeof window !== 'undefined' ? window.location.origin : ''}/respond/${form.token}`
 
   return (
     <AdminLayout title={form.title}>
@@ -204,23 +284,26 @@ export default function FormDetailPage({ params }: { params: Promise<{ id: strin
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Badge
               variant={form.isOpen ? 'default' : 'secondary'}
               className={cn(
-                'font-medium cursor-pointer',
+                'font-medium cursor-pointer transition-colors',
                 form.isOpen && 'bg-green-500/10 text-green-600 hover:bg-green-500/20'
               )}
               onClick={handleToggle}
             >
               {form.isOpen ? 'Ouvert' : 'Fermé'}
             </Badge>
-            <Link href={`/forms/${form.id}/analytics`} className="inline-flex items-center justify-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted">
-                <BarChart3 className="h-4 w-4 mr-2" /> Analytics
-              </Link>
-            <Link href={`/forms/${form.id}/edit`} className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90">
-                <Edit2 className="h-4 w-4 mr-2" /> Modifier
-              </Link>
+            <Link href={`/forms/${form.id}/analytics`} className="inline-flex items-center justify-center rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors">
+              <BarChart3 className="h-4 w-4 mr-2" /> Analytics
+            </Link>
+            <Link href={`/forms/${form.id}/insights`} className="inline-flex items-center justify-center rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors">
+              <Brain className="h-4 w-4 mr-2" /> Insights
+            </Link>
+            <Link href={`/forms/${form.id}/edit`} className="inline-flex items-center justify-center rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary/90 shadow-lg shadow-primary/25 transition-all">
+              <Edit2 className="h-4 w-4 mr-2" /> Modifier
+            </Link>
           </div>
         </div>
 
@@ -243,7 +326,7 @@ export default function FormDetailPage({ params }: { params: Promise<{ id: strin
                 <Users className="h-5 w-5 text-accent" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{form._count?.responses || 0}</p>
+                <p className="text-2xl font-bold">{responses.length}</p>
                 <p className="text-sm text-muted-foreground">Réponses</p>
               </div>
             </CardContent>
@@ -269,9 +352,12 @@ export default function FormDetailPage({ params }: { params: Promise<{ id: strin
 
         {/* Tabs */}
         <Tabs defaultValue={activeTab} className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full max-w-lg grid-cols-3">
             <TabsTrigger value="preview">
               <Eye className="h-4 w-4 mr-2" /> Aperçu
+            </TabsTrigger>
+            <TabsTrigger value="responses">
+              <Users className="h-4 w-4 mr-2" /> Réponses
             </TabsTrigger>
             <TabsTrigger value="qr">
               <QrCode className="h-4 w-4 mr-2" /> Partage
@@ -300,6 +386,10 @@ export default function FormDetailPage({ params }: { params: Promise<{ id: strin
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="responses" className="mt-6">
+            <ResponsesPreviewTab formId={form.id} responses={responses} />
           </TabsContent>
 
           <TabsContent value="qr" className="mt-6">
