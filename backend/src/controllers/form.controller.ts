@@ -10,7 +10,7 @@ const questionSchema = z.object({
   label: z.string().min(1),
   options: z.array(z.string()).optional().default([]),
   required: z.boolean().optional().default(false),
-  order: z.number().int().optional(),
+  order: z.number().int().default(0),
 })
 
 const formSchema = z.object({
