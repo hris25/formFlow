@@ -153,7 +153,7 @@ export default function LoginPage() {
                 </motion.div>
               </CardContent>
 
-              <CardFooter className="flex flex-col gap-6 pt-8 pb-10 px-8 relative">
+              <CardFooter className="flex flex-col gap-6 pt-10 pb-10 px-8 relative border-t-0 bg-transparent">
                 <motion.div
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}

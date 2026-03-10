@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Calendar,
   Brain,
+  Share2,
 } from 'lucide-react'
 import { getForm, getResponses, toggleForm } from '@/lib/api'
 import { Form, Response } from '@/types'
@@ -105,10 +106,10 @@ function QRCodeTab({ form }: { form: Form }) {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col items-center">
-          <div className="p-6 bg-white rounded-2xl shadow-inner">
-            <QRCodeSVG value={link} size={200} level="H" />
+          <div className="p-4 sm:p-6 bg-white rounded-2xl shadow-inner">
+            <QRCodeSVG value={link} size={180} level="H" />
           </div>
-          <p className="text-sm text-muted-foreground mt-4 text-center">
+          <p className="text-sm text-muted-foreground mt-4 text-center px-4">
             Scannez ce code pour accéder au formulaire
           </p>
         </CardContent>
@@ -124,10 +125,11 @@ function QRCodeTab({ form }: { form: Form }) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            <Input value={link} readOnly className="bg-muted/50" />
-            <Button variant="outline" onClick={copyLink}>
-              <Copy className="h-4 w-4" />
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Input value={link} readOnly className="bg-muted/50 text-xs sm:text-sm" />
+            <Button variant="outline" onClick={copyLink} className="shrink-0">
+              <Copy className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Copier</span>
             </Button>
           </div>
           <a href={link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 w-full transition-colors">
@@ -217,6 +219,7 @@ export default function FormDetailPage({ params }: { params: Promise<{ id: strin
   const [form, setForm] = useState<Form | null>(null)
   const [responses, setResponses] = useState<Response[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isToggling, setIsToggling] = useState(false)
 
   const activeTab = searchParams.get('tab') || 'preview'
 
@@ -241,13 +244,22 @@ export default function FormDetailPage({ params }: { params: Promise<{ id: strin
 
   const handleToggle = async () => {
     if (!form) return
+    setIsToggling(true)
     try {
       await toggleForm(form.id)
       setForm({ ...form, isOpen: !form.isOpen })
       toast.success(form.isOpen ? 'Formulaire fermé' : 'Formulaire ouvert')
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Erreur')
+    } finally {
+      setIsToggling(false)
     }
+  }
+
+  const copyLink = () => {
+    const link = `${window.location.origin}/respond/${form.token}`
+    navigator.clipboard.writeText(link)
+    toast.success('Lien copié !')
   }
 
   if (isLoading) {
@@ -272,27 +284,34 @@ export default function FormDetailPage({ params }: { params: Promise<{ id: strin
     <AdminLayout title={form.title}>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col gap-4">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => router.push('/dashboard')}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div>
-              <h1 className="text-xl font-semibold">{form.title}</h1>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl font-semibold truncate">{form.title}</h1>
               {form.description && (
-                <p className="text-sm text-muted-foreground">{form.description}</p>
+                <p className="text-sm text-muted-foreground truncate">{form.description}</p>
               )}
             </div>
+            <Button onClick={copyLink} className="shrink-0 gap-2" variant="default">
+              <Share2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Partager</span>
+            </Button>
           </div>
+          
+          {/* Quick Actions */}
           <div className="flex items-center gap-2 flex-wrap">
             <Badge
               variant={form.isOpen ? 'default' : 'secondary'}
               className={cn(
-                'font-medium cursor-pointer transition-colors',
+                'font-medium cursor-pointer transition-colors flex items-center gap-1.5',
                 form.isOpen && 'bg-green-500/10 text-green-600 hover:bg-green-500/20'
               )}
               onClick={handleToggle}
             >
+              {isToggling && <Loader2 className="h-3 w-3 animate-spin" />}
               {form.isOpen ? 'Ouvert' : 'Fermé'}
             </Badge>
             <Link href={`/forms/${form.id}/analytics`} className="inline-flex items-center justify-center rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors">
@@ -301,7 +320,7 @@ export default function FormDetailPage({ params }: { params: Promise<{ id: strin
             <Link href={`/forms/${form.id}/insights`} className="inline-flex items-center justify-center rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors">
               <Brain className="h-4 w-4 mr-2" /> Insights
             </Link>
-            <Link href={`/forms/${form.id}/edit`} className="inline-flex items-center justify-center rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary/90 shadow-lg shadow-primary/25 transition-all">
+            <Link href={`/forms/${form.id}/edit`} className="inline-flex items-center justify-center rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary/90 shadow-lg shadow-primary/25 transition-all ml-auto sm:ml-0">
               <Edit2 className="h-4 w-4 mr-2" /> Modifier
             </Link>
           </div>
