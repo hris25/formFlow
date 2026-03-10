@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Plus, FileText, Users, Clock, MoreVertical, ExternalLink, Copy, Trash2, BarChart3, QrCode } from 'lucide-react'
+import { Plus, FileText, Users, Clock, MoreVertical, ExternalLink, Copy, Trash2, BarChart3, QrCode, Loader2, Share2 } from 'lucide-react'
 import { getForms, toggleForm, deleteForm } from '@/lib/api'
 import { useFormsStore, useAuthStore } from '@/stores'
 import { Form } from '@/types'
@@ -19,6 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { CreateFormModal } from '@/components/forms/create-form-modal'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -77,25 +78,33 @@ function StatsCards({ forms }: { forms: Form[] }) {
 
 function FormCard({ form, onRefresh }: { form: Form; onRefresh: () => void }) {
   const router = useRouter()
+  const [isToggling, setIsToggling] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const handleToggle = async () => {
+    setIsToggling(true)
     try {
       await toggleForm(form.id)
       toast.success(form.isOpen ? 'Formulaire fermé' : 'Formulaire ouvert')
       onRefresh()
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Erreur')
+    } finally {
+      setIsToggling(false)
     }
   }
 
   const handleDelete = async () => {
     if (!confirm('Supprimer ce formulaire et toutes ses réponses ?')) return
+    setIsDeleting(true)
     try {
       await deleteForm(form.id)
       toast.success('Formulaire supprimé')
       onRefresh()
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Erreur')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -141,12 +150,21 @@ function FormCard({ form, onRefresh }: { form: Form; onRefresh: () => void }) {
                 <QrCode className="h-4 w-4 mr-2" /> QR Code
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleToggle}>
-                <Clock className="h-4 w-4 mr-2" />
+              <DropdownMenuItem onClick={handleToggle} disabled={isToggling}>
+                {isToggling ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Clock className="h-4 w-4 mr-2" />
+                )}
                 {form.isOpen ? 'Fermer' : 'Ouvrir'}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDelete} className="text-destructive">
-                <Trash2 className="h-4 w-4 mr-2" /> Supprimer
+              <DropdownMenuItem onClick={handleDelete} className="text-destructive" disabled={isDeleting}>
+                {isDeleting ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4 mr-2" />
+                )}
+                Supprimer
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -182,7 +200,7 @@ function FormCard({ form, onRefresh }: { form: Form; onRefresh: () => void }) {
   )
 }
 
-function EmptyState() {
+function EmptyState({ onCreateClick }: { onCreateClick: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
@@ -192,9 +210,9 @@ function EmptyState() {
       <p className="text-muted-foreground mt-1 mb-4 max-w-sm">
         Créez votre premier formulaire pour commencer à collecter les retours de vos élèves.
       </p>
-      <Link href="/forms/new" className="inline-flex items-center justify-center rounded-md border border-transparent bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90">
-        <Plus className="h-4 w-4 mr-2" /> Créer un formulaire
-      </Link>
+      <Button onClick={onCreateClick} className="gap-2">
+        <Plus className="h-4 w-4" /> Créer un formulaire
+      </Button>
     </div>
   )
 }
@@ -224,6 +242,7 @@ export default function DashboardPage() {
   const router = useRouter()
   const { isAuthenticated, isLoading: authLoading } = useAuthStore()
   const { forms, setForms, setLoading, isLoading } = useFormsStore()
+  const [createModalOpen, setCreateModalOpen] = useState(false)
 
   const fetchForms = async () => {
     setLoading(true)
@@ -257,16 +276,16 @@ export default function DashboardPage() {
               Gérez vos sondages et consultez les réponses
             </p>
           </div>
-          <Link href="/forms/new" className="inline-flex items-center justify-center rounded-md border border-transparent bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 w-full sm:w-auto">
-            <Plus className="h-4 w-4 mr-2" /> Nouveau formulaire
-          </Link>
+          <Button onClick={() => setCreateModalOpen(true)} className="w-full sm:w-auto gap-2">
+            <Plus className="h-4 w-4" /> Nouveau formulaire
+          </Button>
         </div>
 
         {/* Forms grid */}
         {isLoading ? (
           <LoadingSkeleton />
         ) : forms.length === 0 ? (
-          <EmptyState />
+          <EmptyState onCreateClick={() => setCreateModalOpen(true)} />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {forms.map((form) => (
@@ -275,6 +294,17 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* FAB Mobile */}
+      <button
+        onClick={() => setCreateModalOpen(true)}
+        className="fixed bottom-6 right-6 lg:hidden flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/30 hover:bg-primary/90 transition-all z-50"
+      >
+        <Plus className="h-6 w-6" />
+      </button>
+
+      {/* Create Form Modal */}
+      <CreateFormModal open={createModalOpen} onOpenChange={setCreateModalOpen} />
     </AdminLayout>
   )
 }
