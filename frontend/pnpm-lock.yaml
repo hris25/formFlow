@@ -99,6 +99,16 @@ importers:
       '@types/react-dom':
         specifier: ^18
         version: 18.3.7(@types/react@18.3.28)
+<<<<<<< HEAD:frontend/pnpm-lock.yaml
+=======
+      autoprefixer:
+<<<<<<< Updated upstream:pnpm-lock.yaml
+        specifier: ^10
+=======
+        specifier: ^10.4.27
+>>>>>>> Stashed changes:frontend/pnpm-lock.yaml
+        version: 10.4.27(postcss@8.5.8)
+>>>>>>> frontend-sacca:pnpm-lock.yaml
       eslint:
         specifier: ^8
         version: 8.57.1
