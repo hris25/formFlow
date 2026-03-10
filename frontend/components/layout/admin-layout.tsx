@@ -15,18 +15,19 @@ interface AdminLayoutProps {
 
 export function AdminLayout({ children, title }: AdminLayoutProps) {
   const router = useRouter()
-  const { isAuthenticated, isLoading, setLoading, token } = useAuthStore()
+  const { isAuthenticated, isLoading, token } = useAuthStore()
   const { sidebarCollapsed } = useUIStore()
 
   useEffect(() => {
+    // Si pas de token et pas en cours de chargement, rediriger vers login
     if (!token && !isLoading) {
       router.push('/login')
-    } else {
-      setLoading(false)
     }
-  }, [token, isLoading, router, setLoading])
+  }, [token, isLoading, router])
 
-  if (isLoading || !isAuthenticated) {
+  // Afficher le spinner seulement si on n'a pas de token ET qu'on vérifie l'auth
+  // Si on a un token, on peut afficher directement le contenu
+  if (!token || (!isAuthenticated && isLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
