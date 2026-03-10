@@ -97,7 +97,11 @@ importers:
         specifier: ^18
         version: 18.3.7(@types/react@18.3.28)
       autoprefixer:
+<<<<<<< Updated upstream:pnpm-lock.yaml
         specifier: ^10
+=======
+        specifier: ^10.4.27
+>>>>>>> Stashed changes:frontend/pnpm-lock.yaml
         version: 10.4.27(postcss@8.5.8)
       eslint:
         specifier: ^8
