@@ -18,8 +18,9 @@ import {
   Filter,
   LayoutGrid,
   List,
-  SlidersHorizontal,
   ArrowUpDown,
+  Loader2,
+  Share2,
 } from 'lucide-react'
 import { getForms, toggleForm, deleteForm } from '@/lib/api'
 import { useFormsStore, useAuthStore } from '@/stores'
@@ -54,25 +55,33 @@ type ViewMode = 'grid' | 'list'
 
 function FormCard({ form, onRefresh, viewMode }: { form: Form; onRefresh: () => void; viewMode: ViewMode }) {
   const router = useRouter()
+  const [isToggling, setIsToggling] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const handleToggle = async () => {
+    setIsToggling(true)
     try {
       await toggleForm(form.id)
       toast.success(form.isOpen ? 'Formulaire fermé' : 'Formulaire ouvert')
       onRefresh()
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Erreur')
+    } finally {
+      setIsToggling(false)
     }
   }
 
   const handleDelete = async () => {
     if (!confirm('Supprimer ce formulaire et toutes ses réponses ?')) return
+    setIsDeleting(true)
     try {
       await deleteForm(form.id)
       toast.success('Formulaire supprimé')
       onRefresh()
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Erreur')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -80,6 +89,19 @@ function FormCard({ form, onRefresh, viewMode }: { form: Form; onRefresh: () => 
     const link = `${window.location.origin}/respond/${form.token}`
     navigator.clipboard.writeText(link)
     toast.success('Lien copié !')
+  }
+
+  const shareLink = async () => {
+    const link = `${window.location.origin}/respond/${form.token}`
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: form.title, url: link })
+      } catch {
+        copyLink()
+      }
+    } else {
+      copyLink()
+    }
   }
 
   const createdDate = new Date(form.createdAt).toLocaleDateString('fr-FR', {
@@ -90,13 +112,16 @@ function FormCard({ form, onRefresh, viewMode }: { form: Form; onRefresh: () => 
 
   if (viewMode === 'list') {
     return (
-      <Card className="group border-0 shadow-sm hover:shadow-md transition-all duration-200">
-        <CardContent className="flex items-center gap-4 py-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+      <Card className={cn(
+        'group border-0 shadow-sm hover:shadow-md transition-all duration-200',
+        (isToggling || isDeleting) && 'opacity-60 pointer-events-none'
+      )}>
+        <CardContent className="flex items-center gap-3 sm:gap-4 py-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 dark:bg-primary/20">
             <FileText className="h-5 w-5 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
-            <Link href={`/forms/${form.id}`} className="font-semibold text-sm hover:text-primary transition-colors truncate block">
+            <Link href={`/forms/${form.id}`} className="font-semibold text-sm hover:text-primary transition-colors truncate block text-foreground">
               {form.title}
             </Link>
             {form.description && (
@@ -117,12 +142,15 @@ function FormCard({ form, onRefresh, viewMode }: { form: Form; onRefresh: () => 
             variant={form.isOpen ? 'default' : 'secondary'}
             className={cn(
               'font-medium shrink-0',
-              form.isOpen && 'bg-green-500/10 text-green-600 hover:bg-green-500/20'
+              form.isOpen && 'bg-green-500/10 text-green-600 dark:text-green-400 hover:bg-green-500/20'
             )}
           >
             {form.isOpen ? 'Ouvert' : 'Fermé'}
           </Badge>
           <span className="hidden md:block text-xs text-muted-foreground shrink-0">{createdDate}</span>
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={shareLink}>
+            <Share2 className="h-4 w-4" />
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger>
               <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
@@ -146,12 +174,21 @@ function FormCard({ form, onRefresh, viewMode }: { form: Form; onRefresh: () => 
                 <Copy className="h-4 w-4 mr-2" /> Copier le lien
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleToggle}>
-                <Clock className="h-4 w-4 mr-2" />
+              <DropdownMenuItem onClick={handleToggle} disabled={isToggling}>
+                {isToggling ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Clock className="h-4 w-4 mr-2" />
+                )}
                 {form.isOpen ? 'Fermer' : 'Ouvrir'}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDelete} className="text-destructive">
-                <Trash2 className="h-4 w-4 mr-2" /> Supprimer
+              <DropdownMenuItem onClick={handleDelete} className="text-destructive" disabled={isDeleting}>
+                {isDeleting ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4 mr-2" />
+                )}
+                Supprimer
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -161,12 +198,15 @@ function FormCard({ form, onRefresh, viewMode }: { form: Form; onRefresh: () => 
   }
 
   return (
-    <Card className="group border-0 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
+    <Card className={cn(
+      'group border-0 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5',
+      (isToggling || isDeleting) && 'opacity-60 pointer-events-none'
+    )}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <Link href={`/forms/${form.id}`}>
-              <CardTitle className="text-base font-semibold truncate hover:text-primary transition-colors cursor-pointer">
+              <CardTitle className="text-base font-semibold truncate hover:text-primary transition-colors cursor-pointer text-foreground">
                 {form.title}
               </CardTitle>
             </Link>
@@ -174,41 +214,55 @@ function FormCard({ form, onRefresh, viewMode }: { form: Form; onRefresh: () => 
               <CardDescription className="mt-1 line-clamp-2">{form.description}</CardDescription>
             )}
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger>
-              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => router.push(`/forms/${form.id}`)}>
-                <ExternalLink className="h-4 w-4 mr-2" /> Voir détails
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push(`/forms/${form.id}/edit`)}>
-                <FileText className="h-4 w-4 mr-2" /> Modifier
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push(`/forms/${form.id}/analytics`)}>
-                <BarChart3 className="h-4 w-4 mr-2" /> Analytics
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push(`/forms/${form.id}/responses`)}>
-                <Users className="h-4 w-4 mr-2" /> Réponses
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={copyLink}>
-                <Copy className="h-4 w-4 mr-2" /> Copier le lien
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push(`/forms/${form.id}?tab=qr`)}>
-                <QrCode className="h-4 w-4 mr-2" /> QR Code
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleToggle}>
-                <Clock className="h-4 w-4 mr-2" />
-                {form.isOpen ? 'Fermer' : 'Ouvrir'}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDelete} className="text-destructive">
-                <Trash2 className="h-4 w-4 mr-2" /> Supprimer
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-1 shrink-0">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={shareLink}>
+              <Share2 className="h-4 w-4" />
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => router.push(`/forms/${form.id}`)}>
+                  <ExternalLink className="h-4 w-4 mr-2" /> Voir détails
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push(`/forms/${form.id}/edit`)}>
+                  <FileText className="h-4 w-4 mr-2" /> Modifier
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push(`/forms/${form.id}/analytics`)}>
+                  <BarChart3 className="h-4 w-4 mr-2" /> Analytics
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push(`/forms/${form.id}/responses`)}>
+                  <Users className="h-4 w-4 mr-2" /> Réponses
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={copyLink}>
+                  <Copy className="h-4 w-4 mr-2" /> Copier le lien
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push(`/forms/${form.id}?tab=qr`)}>
+                  <QrCode className="h-4 w-4 mr-2" /> QR Code
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleToggle} disabled={isToggling}>
+                  {isToggling ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Clock className="h-4 w-4 mr-2" />
+                  )}
+                  {form.isOpen ? 'Fermer' : 'Ouvrir'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDelete} className="text-destructive" disabled={isDeleting}>
+                  {isDeleting ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4 mr-2" />
+                  )}
+                  Supprimer
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="pt-0">
@@ -218,7 +272,7 @@ function FormCard({ form, onRefresh, viewMode }: { form: Form; onRefresh: () => 
               variant={form.isOpen ? 'default' : 'secondary'}
               className={cn(
                 'font-medium',
-                form.isOpen && 'bg-green-500/10 text-green-600 hover:bg-green-500/20'
+                form.isOpen && 'bg-green-500/10 text-green-600 dark:text-green-400 hover:bg-green-500/20'
               )}
             >
               {form.isOpen ? 'Ouvert' : 'Fermé'}
@@ -251,7 +305,7 @@ function EmptyState({ hasFilter }: { hasFilter: boolean }) {
           <FileText className="h-8 w-8 text-muted-foreground" />
         )}
       </div>
-      <h3 className="text-lg font-semibold">
+      <h3 className="text-lg font-semibold text-foreground">
         {hasFilter ? 'Aucun résultat' : 'Aucun formulaire'}
       </h3>
       <p className="text-muted-foreground mt-1 mb-4 max-w-sm">
@@ -262,7 +316,7 @@ function EmptyState({ hasFilter }: { hasFilter: boolean }) {
       {!hasFilter && (
         <Link
           href="/forms/new"
-          className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
+          className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         >
           <Plus className="h-4 w-4 mr-2" /> Créer un formulaire
         </Link>
@@ -300,7 +354,6 @@ export default function FormsPage() {
   const filteredAndSorted = useMemo(() => {
     let result = [...forms]
 
-    // Search filter
     if (search.trim()) {
       const q = search.toLowerCase()
       result = result.filter(
@@ -310,11 +363,9 @@ export default function FormsPage() {
       )
     }
 
-    // Status filter
     if (filterStatus === 'open') result = result.filter((f) => f.isOpen)
     if (filterStatus === 'closed') result = result.filter((f) => !f.isOpen)
 
-    // Sort
     result.sort((a, b) => {
       switch (sortBy) {
         case 'title':
@@ -338,14 +389,14 @@ export default function FormsPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-semibold">Tous les formulaires</h2>
+            <h2 className="text-xl font-semibold text-foreground">Tous les formulaires</h2>
             <p className="text-sm text-muted-foreground">
               {forms.length} formulaire{forms.length > 1 ? 's' : ''} au total
             </p>
           </div>
           <Link
             href="/forms/new"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 shadow-lg shadow-primary/25 w-full sm:w-auto transition-all hover:shadow-xl hover:shadow-primary/30"
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25 w-full sm:w-auto transition-all hover:shadow-xl hover:shadow-primary/30"
           >
             <Plus className="h-4 w-4 mr-2" /> Nouveau formulaire
           </Link>
@@ -362,9 +413,9 @@ export default function FormsPage() {
               className="pl-9 bg-muted/50"
             />
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 overflow-x-auto">
             <Select value={filterStatus} onValueChange={(v: FilterStatus) => setFilterStatus(v)}>
-              <SelectTrigger className="w-[130px]">
+              <SelectTrigger className="w-[120px] sm:w-[130px] shrink-0">
                 <Filter className="h-4 w-4 mr-2" />
                 <SelectValue />
               </SelectTrigger>
@@ -375,7 +426,7 @@ export default function FormsPage() {
               </SelectContent>
             </Select>
             <Select value={sortBy} onValueChange={(v: SortKey) => setSortBy(v)}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-[130px] sm:w-[150px] shrink-0">
                 <ArrowUpDown className="h-4 w-4 mr-2" />
                 <SelectValue />
               </SelectTrigger>
@@ -385,7 +436,7 @@ export default function FormsPage() {
                 <SelectItem value="responses">Plus de réponses</SelectItem>
               </SelectContent>
             </Select>
-            <div className="hidden sm:flex border rounded-md">
+            <div className="hidden sm:flex border rounded-md shrink-0">
               <Button
                 variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
                 size="icon"

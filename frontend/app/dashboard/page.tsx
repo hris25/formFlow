@@ -28,47 +28,47 @@ function StatsCards({ forms }: { forms: Form[] }) {
   const openForms = forms.filter((f) => f.isOpen).length
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <Card className="border-0 shadow-sm bg-gradient-to-br from-primary/5 to-primary/10">
+    <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+      <Card className="border-0 shadow-sm bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Formulaires</CardTitle>
+          <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Formulaires</CardTitle>
           <FileText className="h-4 w-4 text-primary" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{forms.length}</div>
+          <div className="text-xl sm:text-2xl font-bold text-foreground">{forms.length}</div>
           <p className="text-xs text-muted-foreground mt-1">Total créés</p>
         </CardContent>
       </Card>
 
-      <Card className="border-0 shadow-sm bg-gradient-to-br from-accent/5 to-accent/10">
+      <Card className="border-0 shadow-sm bg-gradient-to-br from-accent/5 to-accent/10 dark:from-accent/10 dark:to-accent/20">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Réponses</CardTitle>
+          <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Réponses</CardTitle>
           <Users className="h-4 w-4 text-accent" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{totalResponses}</div>
+          <div className="text-xl sm:text-2xl font-bold text-foreground">{totalResponses}</div>
           <p className="text-xs text-muted-foreground mt-1">Total reçues</p>
         </CardContent>
       </Card>
 
-      <Card className="border-0 shadow-sm bg-gradient-to-br from-green-500/5 to-green-500/10">
+      <Card className="border-0 shadow-sm bg-gradient-to-br from-green-500/5 to-green-500/10 dark:from-green-500/10 dark:to-green-500/20">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Ouverts</CardTitle>
-          <Clock className="h-4 w-4 text-green-500" />
+          <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Ouverts</CardTitle>
+          <Clock className="h-4 w-4 text-green-500 dark:text-green-400" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{openForms}</div>
+          <div className="text-xl sm:text-2xl font-bold text-foreground">{openForms}</div>
           <p className="text-xs text-muted-foreground mt-1">En cours</p>
         </CardContent>
       </Card>
 
-      <Card className="border-0 shadow-sm bg-gradient-to-br from-orange-500/5 to-orange-500/10">
+      <Card className="border-0 shadow-sm bg-gradient-to-br from-orange-500/5 to-orange-500/10 dark:from-orange-500/10 dark:to-orange-500/20">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Fermés</CardTitle>
-          <Clock className="h-4 w-4 text-orange-500" />
+          <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Fermés</CardTitle>
+          <Clock className="h-4 w-4 text-orange-500 dark:text-orange-400" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{forms.length - openForms}</div>
+          <div className="text-xl sm:text-2xl font-bold text-foreground">{forms.length - openForms}</div>
           <p className="text-xs text-muted-foreground mt-1">Terminés</p>
         </CardContent>
       </Card>
@@ -114,6 +114,19 @@ function FormCard({ form, onRefresh }: { form: Form; onRefresh: () => void }) {
     toast.success('Lien copié !')
   }
 
+  const shareLink = async () => {
+    const link = `${window.location.origin}/respond/${form.token}`
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: form.title, url: link })
+      } catch {
+        copyLink()
+      }
+    } else {
+      copyLink()
+    }
+  }
+
   const createdDate = new Date(form.createdAt).toLocaleDateString('fr-FR', {
     day: 'numeric',
     month: 'short',
@@ -121,53 +134,61 @@ function FormCard({ form, onRefresh }: { form: Form; onRefresh: () => void }) {
   })
 
   return (
-    <Card className="group border-0 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
+    <Card className={cn(
+      'group border-0 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5',
+      (isToggling || isDeleting) && 'opacity-60 pointer-events-none'
+    )}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <CardTitle className="text-base font-semibold truncate">{form.title}</CardTitle>
+          <div className="flex-1 min-w-0 cursor-pointer" onClick={() => router.push(`/forms/${form.id}`)}>
+            <CardTitle className="text-base font-semibold truncate text-foreground hover:text-primary transition-colors">{form.title}</CardTitle>
             {form.description && (
               <CardDescription className="mt-1 line-clamp-2">{form.description}</CardDescription>
             )}
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger>
-              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => router.push(`/forms/${form.id}`)}>
-                <ExternalLink className="h-4 w-4 mr-2" /> Voir les détails
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push(`/forms/${form.id}/analytics`)}>
-                <BarChart3 className="h-4 w-4 mr-2" /> Analytics
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={copyLink}>
-                <Copy className="h-4 w-4 mr-2" /> Copier le lien
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push(`/forms/${form.id}?tab=qr`)}>
-                <QrCode className="h-4 w-4 mr-2" /> QR Code
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleToggle} disabled={isToggling}>
-                {isToggling ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Clock className="h-4 w-4 mr-2" />
-                )}
-                {form.isOpen ? 'Fermer' : 'Ouvrir'}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDelete} className="text-destructive" disabled={isDeleting}>
-                {isDeleting ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Trash2 className="h-4 w-4 mr-2" />
-                )}
-                Supprimer
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-1 shrink-0">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={shareLink}>
+              <Share2 className="h-4 w-4" />
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => router.push(`/forms/${form.id}`)}>
+                  <ExternalLink className="h-4 w-4 mr-2" /> Voir les détails
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push(`/forms/${form.id}/analytics`)}>
+                  <BarChart3 className="h-4 w-4 mr-2" /> Analytics
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={copyLink}>
+                  <Copy className="h-4 w-4 mr-2" /> Copier le lien
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push(`/forms/${form.id}?tab=qr`)}>
+                  <QrCode className="h-4 w-4 mr-2" /> QR Code
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleToggle} disabled={isToggling}>
+                  {isToggling ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Clock className="h-4 w-4 mr-2" />
+                  )}
+                  {form.isOpen ? 'Fermer' : 'Ouvrir'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDelete} className="text-destructive" disabled={isDeleting}>
+                  {isDeleting ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4 mr-2" />
+                  )}
+                  Supprimer
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="pt-0">
@@ -177,7 +198,7 @@ function FormCard({ form, onRefresh }: { form: Form; onRefresh: () => void }) {
               variant={form.isOpen ? 'default' : 'secondary'}
               className={cn(
                 'font-medium',
-                form.isOpen && 'bg-green-500/10 text-green-600 hover:bg-green-500/20'
+                form.isOpen && 'bg-green-500/10 text-green-600 dark:text-green-400 hover:bg-green-500/20'
               )}
             >
               {form.isOpen ? 'Ouvert' : 'Fermé'}
@@ -206,7 +227,7 @@ function EmptyState({ onCreateClick }: { onCreateClick: () => void }) {
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
         <FileText className="h-8 w-8 text-muted-foreground" />
       </div>
-      <h3 className="text-lg font-semibold">Aucun formulaire</h3>
+      <h3 className="text-lg font-semibold text-foreground">Aucun formulaire</h3>
       <p className="text-muted-foreground mt-1 mb-4 max-w-sm">
         Créez votre premier formulaire pour commencer à collecter les retours de vos élèves.
       </p>
@@ -271,7 +292,7 @@ export default function DashboardPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-semibold">Mes formulaires</h2>
+            <h2 className="text-xl font-semibold text-foreground">Mes formulaires</h2>
             <p className="text-sm text-muted-foreground">
               Gérez vos sondages et consultez les réponses
             </p>
@@ -298,7 +319,7 @@ export default function DashboardPage() {
       {/* FAB Mobile */}
       <button
         onClick={() => setCreateModalOpen(true)}
-        className="fixed bottom-6 right-6 lg:hidden flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/30 hover:bg-primary/90 transition-all z-50"
+        className="fixed bottom-6 right-6 lg:hidden flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 hover:bg-primary/90 transition-all z-50 active:scale-95"
       >
         <Plus className="h-6 w-6" />
       </button>
