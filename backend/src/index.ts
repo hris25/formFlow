@@ -22,6 +22,10 @@ app.use(cors({
 }))
 app.use(express.json())
 
+app.get('/ping', (req, res) => {
+  res.json({ status: 'alive' });
+});
+
 app.use('/api/auth', authRoutes)
 app.use('/api/forms', formRoutes)
 app.use('/api/respond', responseRoutes)
