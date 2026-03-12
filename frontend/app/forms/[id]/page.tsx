@@ -506,7 +506,7 @@ export default function FormDetailPage({ params }: { params: Promise<{ id: strin
         </div>
 
         {/* Action cards */}
-        <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="grid gap-3 grid-cols-2 sm:grid-cols-3">
           <ActionCard
             icon={BarChart3}
             title="Analytics"

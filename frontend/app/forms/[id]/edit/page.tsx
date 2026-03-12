@@ -227,7 +227,7 @@ export default function EditFormPage({ params }: { params: Promise<{ id: string 
                             <ArrowLeft className="h-5 w-5" />
                         </Button>
                         <div>
-                            <h1 className="text-xl font-semibold">Modifier le formulaire</h1>
+                            <h1 className="text-xl font-semibold text-foreground">Modifier le formulaire</h1>
                             <p className="text-sm text-muted-foreground">
                                 Modifiez les informations et les questions
                             </p>
@@ -238,7 +238,7 @@ export default function EditFormPage({ params }: { params: Promise<{ id: string 
                 {/* Form info */}
                 <Card className="border-0 shadow-sm">
                     <CardHeader>
-                        <CardTitle className="text-base">Informations générales</CardTitle>
+                        <CardTitle className="text-base text-foreground">Informations générales</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleSubmit(saveFormInfo)} className="space-y-4">
@@ -278,7 +278,7 @@ export default function EditFormPage({ params }: { params: Promise<{ id: string 
                 {/* Questions */}
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                        <h2 className="text-lg font-semibold">Questions</h2>
+                        <h2 className="text-lg font-semibold text-foreground">Questions</h2>
                         <Badge variant="secondary">{questions.length} question{questions.length > 1 ? 's' : ''}</Badge>
                     </div>
 
@@ -313,7 +313,7 @@ export default function EditFormPage({ params }: { params: Promise<{ id: string 
                                                     </Button>
                                                 </div>
                                                 <Badge variant="secondary" className="font-mono">Q{index + 1}</Badge>
-                                                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 dark:bg-primary/20 text-primary">
                                                     <TypeIcon className="h-4 w-4" />
                                                 </div>
                                                 {question.isDirty && (
