@@ -89,14 +89,14 @@ export default function ProfilePage() {
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-xl font-semibold">Mon profil</h1>
+          <h1 className="text-xl font-semibold text-foreground">Mon profil</h1>
           <p className="text-sm text-muted-foreground">Gérez vos informations personnelles</p>
         </div>
 
         {/* Profile info */}
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="text-base flex items-center gap-2 text-foreground">
               <User className="h-5 w-5" /> Informations personnelles
             </CardTitle>
             <CardDescription>Modifiez votre nom et votre email</CardDescription>
@@ -152,7 +152,7 @@ export default function ProfilePage() {
         {/* Password change */}
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="text-base flex items-center gap-2 text-foreground">
               <Lock className="h-5 w-5" /> Mot de passe
             </CardTitle>
             <CardDescription>Changez votre mot de passe</CardDescription>
