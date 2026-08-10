@@ -48,15 +48,22 @@ import {
 } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 type SortKey = 'date' | 'title' | 'responses'
 type FilterStatus = 'all' | 'open' | 'closed'
 type ViewMode = 'grid' | 'list'
 
-function FormCard({ form, onRefresh, viewMode }: { form: Form; onRefresh: () => void; viewMode: ViewMode }) {
+function FormCard({ form, onRefresh, viewMode, onRequestDelete }: { form: Form; onRefresh: () => void; viewMode: ViewMode; onRequestDelete: (form: Form) => void }) {
   const router = useRouter()
   const [isToggling, setIsToggling] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
 
   const handleToggle = async () => {
     setIsToggling(true)
@@ -71,18 +78,8 @@ function FormCard({ form, onRefresh, viewMode }: { form: Form; onRefresh: () => 
     }
   }
 
-  const handleDelete = async () => {
-    if (!confirm('Supprimer ce formulaire et toutes ses réponses ?')) return
-    setIsDeleting(true)
-    try {
-      await deleteForm(form.id)
-      toast.success('Formulaire supprimé')
-      onRefresh()
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erreur')
-    } finally {
-      setIsDeleting(false)
-    }
+  const handleDelete = () => {
+    onRequestDelete(form)
   }
 
   const copyLink = () => {
@@ -112,9 +109,9 @@ function FormCard({ form, onRefresh, viewMode }: { form: Form; onRefresh: () => 
 
   if (viewMode === 'list') {
     return (
-      <Card className={cn(
+<Card className={cn(
         'group border-0 shadow-sm hover:shadow-md transition-all duration-200',
-        (isToggling || isDeleting) && 'opacity-60 pointer-events-none'
+        isToggling && 'opacity-60 pointer-events-none'
       )}>
         <CardContent className="flex items-center gap-3 sm:gap-4 py-4">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 dark:bg-primary/20">
@@ -148,12 +145,12 @@ function FormCard({ form, onRefresh, viewMode }: { form: Form; onRefresh: () => 
             {form.isOpen ? 'Ouvert' : 'Fermé'}
           </Badge>
           <span className="hidden md:block text-xs text-muted-foreground shrink-0">{createdDate}</span>
-          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={shareLink}>
+          <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={shareLink}>
             <Share2 className="h-4 w-4" />
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger>
-              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+              <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0">
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -165,7 +162,7 @@ function FormCard({ form, onRefresh, viewMode }: { form: Form; onRefresh: () => 
                 <FileText className="h-4 w-4 mr-2" /> Modifier
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => router.push(`/forms/${form.id}/analytics`)}>
-                <BarChart3 className="h-4 w-4 mr-2" /> Analytics
+                <BarChart3 className="h-4 w-4 mr-2" /> Statistiques
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => router.push(`/forms/${form.id}/responses`)}>
                 <Users className="h-4 w-4 mr-2" /> Réponses
@@ -182,12 +179,8 @@ function FormCard({ form, onRefresh, viewMode }: { form: Form; onRefresh: () => 
                 )}
                 {form.isOpen ? 'Fermer' : 'Ouvrir'}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDelete} className="text-destructive" disabled={isDeleting}>
-                {isDeleting ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Trash2 className="h-4 w-4 mr-2" />
-                )}
+<DropdownMenuItem onClick={handleDelete} className="text-destructive">
+                <Trash2 className="h-4 w-4 mr-2" />
                 Supprimer
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -199,8 +192,8 @@ function FormCard({ form, onRefresh, viewMode }: { form: Form; onRefresh: () => 
 
   return (
     <Card className={cn(
-      'group border-0 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5',
-      (isToggling || isDeleting) && 'opacity-60 pointer-events-none'
+'group border-0 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5',
+      isToggling && 'opacity-60 pointer-events-none'
     )}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
@@ -215,12 +208,12 @@ function FormCard({ form, onRefresh, viewMode }: { form: Form; onRefresh: () => 
             )}
           </div>
           <div className="flex items-center gap-1 shrink-0">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={shareLink}>
+            <Button variant="ghost" size="icon" className="h-10 w-10" onClick={shareLink}>
               <Share2 className="h-4 w-4" />
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button variant="ghost" size="icon" className="h-10 w-10">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -232,7 +225,7 @@ function FormCard({ form, onRefresh, viewMode }: { form: Form; onRefresh: () => 
                   <FileText className="h-4 w-4 mr-2" /> Modifier
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => router.push(`/forms/${form.id}/analytics`)}>
-                  <BarChart3 className="h-4 w-4 mr-2" /> Analytics
+                  <BarChart3 className="h-4 w-4 mr-2" /> Statistiques
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => router.push(`/forms/${form.id}/responses`)}>
                   <Users className="h-4 w-4 mr-2" /> Réponses
@@ -252,12 +245,8 @@ function FormCard({ form, onRefresh, viewMode }: { form: Form; onRefresh: () => 
                   )}
                   {form.isOpen ? 'Fermer' : 'Ouvrir'}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleDelete} className="text-destructive" disabled={isDeleting}>
-                  {isDeleting ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-4 w-4 mr-2" />
-                  )}
+                <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+                  <Trash2 className="h-4 w-4 mr-2" />
                   Supprimer
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -332,6 +321,23 @@ export default function FormsPage() {
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
   const [sortBy, setSortBy] = useState<SortKey>('date')
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
+  const [formToDelete, setFormToDelete] = useState<Form | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const deleteFormAction = async () => {
+    if (!formToDelete) return
+    setIsDeleting(true)
+    try {
+      await deleteForm(formToDelete.id)
+      toast.success('Formulaire supprimé')
+      setFormToDelete(null)
+      fetchForms()
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Erreur')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   const fetchForms = async () => {
     setLoading(true)
@@ -492,12 +498,34 @@ export default function FormsPage() {
                 className="animate-slide-up"
                 style={{ animationDelay: `${index * 50}ms` }}
               >
-                <FormCard form={form} onRefresh={fetchForms} viewMode={viewMode} />
+                <FormCard form={form} onRefresh={fetchForms} viewMode={viewMode} onRequestDelete={setFormToDelete} />
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={formToDelete !== null} onOpenChange={(open) => !open && setFormToDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Supprimer ce formulaire ?</DialogTitle>
+            <DialogDescription>
+              {formToDelete ? `« ${formToDelete.title} » et toutes ses réponses seront définitivement supprimées.` : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setFormToDelete(null)}>
+              Annuler
+            </Button>
+            <Button type="button" variant="destructive" onClick={deleteFormAction} disabled={isDeleting} className="gap-2">
+              {isDeleting && <Loader2 className="h-4 w-4 animate-spin" />}
+              Supprimer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   )
 }
+

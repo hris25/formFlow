@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Plus, FileText, Users, Clock, MoreVertical, ExternalLink, Copy, Trash2, BarChart3, QrCode, Loader2, Share2 } from 'lucide-react'
-import { getForms, toggleForm, deleteForm } from '@/lib/api'
+import { Plus, FileText, Users, Clock, MoreVertical, ExternalLink, Copy, Trash2, BarChart3, QrCode, Loader2, Share2, Sparkles, X, CheckCircle2 } from 'lucide-react'
+import { getForms, toggleForm, deleteForm, createForm } from '@/lib/api'
+import { buildDemoForm } from '@/lib/templates'
 import { useFormsStore, useAuthStore } from '@/stores'
 import { Form } from '@/types'
 import { AdminLayout } from '@/components/layout'
@@ -19,7 +20,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { CreateFormModal } from '@/components/forms/create-form-modal'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -80,6 +88,7 @@ function FormCard({ form, onRefresh }: { form: Form; onRefresh: () => void }) {
   const router = useRouter()
   const [isToggling, setIsToggling] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
 
   const handleToggle = async () => {
     setIsToggling(true)
@@ -95,7 +104,6 @@ function FormCard({ form, onRefresh }: { form: Form; onRefresh: () => void }) {
   }
 
   const handleDelete = async () => {
-    if (!confirm('Supprimer ce formulaire et toutes ses réponses ?')) return
     setIsDeleting(true)
     try {
       await deleteForm(form.id)
@@ -105,6 +113,7 @@ function FormCard({ form, onRefresh }: { form: Form; onRefresh: () => void }) {
       toast.error(error.response?.data?.message || 'Erreur')
     } finally {
       setIsDeleting(false)
+      setConfirmDeleteOpen(false)
     }
   }
 
@@ -133,8 +142,9 @@ function FormCard({ form, onRefresh }: { form: Form; onRefresh: () => void }) {
     year: 'numeric',
   })
 
-  return (
-    <Card className={cn(
+return (
+    <>
+      <Card className={cn(
       'group border-0 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5',
       (isToggling || isDeleting) && 'opacity-60 pointer-events-none'
     )}>
@@ -147,12 +157,12 @@ function FormCard({ form, onRefresh }: { form: Form; onRefresh: () => void }) {
             )}
           </div>
           <div className="flex items-center gap-1 shrink-0">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={shareLink}>
+            <Button variant="ghost" size="icon" className="h-10 w-10" onClick={shareLink}>
               <Share2 className="h-4 w-4" />
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button variant="ghost" size="icon" className="h-10 w-10">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -161,7 +171,7 @@ function FormCard({ form, onRefresh }: { form: Form; onRefresh: () => void }) {
                   <ExternalLink className="h-4 w-4 mr-2" /> Voir les détails
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => router.push(`/forms/${form.id}/analytics`)}>
-                  <BarChart3 className="h-4 w-4 mr-2" /> Analytics
+                  <BarChart3 className="h-4 w-4 mr-2" /> Statistiques
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={copyLink}>
                   <Copy className="h-4 w-4 mr-2" /> Copier le lien
@@ -178,12 +188,8 @@ function FormCard({ form, onRefresh }: { form: Form; onRefresh: () => void }) {
                   )}
                   {form.isOpen ? 'Fermer' : 'Ouvrir'}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleDelete} className="text-destructive" disabled={isDeleting}>
-                  {isDeleting ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-4 w-4 mr-2" />
-                  )}
+                <DropdownMenuItem onClick={() => setConfirmDeleteOpen(true)} className="text-destructive">
+                  <Trash2 className="h-4 w-4 mr-2" />
                   Supprimer
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -218,10 +224,31 @@ function FormCard({ form, onRefresh }: { form: Form; onRefresh: () => void }) {
         </div>
       </CardContent>
     </Card>
+
+      <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Supprimer ce formulaire ?</DialogTitle>
+            <DialogDescription>
+              « {form.title} » et toutes ses réponses seront définitivement supprimées.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setConfirmDeleteOpen(false)}>
+              Annuler
+            </Button>
+            <Button type="button" variant="destructive" onClick={handleDelete} disabled={isDeleting} className="gap-2">
+              {isDeleting && <Loader2 className="h-4 w-4 animate-spin" />}
+              Supprimer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+</Dialog>
+    </>
   )
 }
 
-function EmptyState({ onCreateClick }: { onCreateClick: () => void }) {
+function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
@@ -231,9 +258,12 @@ function EmptyState({ onCreateClick }: { onCreateClick: () => void }) {
       <p className="text-muted-foreground mt-1 mb-4 max-w-sm">
         Créez votre premier formulaire pour commencer à collecter les retours de vos élèves.
       </p>
-      <Button onClick={onCreateClick} className="gap-2">
+      <Link
+        href="/forms/new"
+        className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors gap-2"
+      >
         <Plus className="h-4 w-4" /> Créer un formulaire
-      </Button>
+      </Link>
     </div>
   )
 }
@@ -259,11 +289,103 @@ function LoadingSkeleton() {
   )
 }
 
+function OnboardingBanner({
+  onDismiss,
+  onCreateDemo,
+  isCreatingDemo,
+}: {
+  onDismiss: () => void
+  onCreateDemo: () => void
+  isCreatingDemo: boolean
+}) {
+  const steps = [
+    { icon: FileText, title: '1. Créez un sondage', text: 'Choisissez un modèle prêt à l\'emploi' },
+    { icon: Share2, title: '2. Partagez le lien', text: 'QR code, copier le lien, réseaux sociaux' },
+    { icon: Users, title: '3. Lisez les réponses', text: 'Statistiques et analyse automatique' },
+  ]
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-accent/10 p-5 sm:p-6">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="absolute top-3 right-3 h-10 w-10"
+        onClick={onDismiss}
+        aria-label="Masquer cette aide"
+      >
+        <X className="h-4 w-4" />
+      </Button>
+      <div className="flex items-center gap-2 mb-4">
+        <Sparkles className="h-5 w-5 text-primary" />
+        <h2 className="text-base font-semibold text-foreground">Bienvenue ! En 3 étapes</h2>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {steps.map((step) => (
+          <div key={step.title} className="flex items-start gap-3 rounded-xl bg-background/70 p-3 border border-border/50">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <step.icon className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-foreground">{step.title}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{step.text}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="flex flex-col sm:flex-row gap-3 mt-4">
+        <Button className="gap-2" onClick={onCreateDemo} disabled={isCreatingDemo}>
+          {isCreatingDemo ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <CheckCircle2 className="h-4 w-4" />
+          )}
+          {isCreatingDemo ? 'Création en cours…' : 'Essayer avec un exemple'}
+        </Button>
+<Link
+          href="/forms/new"
+          className="inline-flex items-center justify-center gap-2 rounded-md border border-input bg-transparent px-4 py-2 text-sm font-medium text-foreground shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground"
+        >
+          <Plus className="h-4 w-4" /> Créer mon propre sondage
+        </Link>
+      </div>
+    </div>
+  )
+}
+
 export default function DashboardPage() {
-  const router = useRouter()
   const { isAuthenticated, isLoading: authLoading } = useAuthStore()
   const { forms, setForms, setLoading, isLoading } = useFormsStore()
-  const [createModalOpen, setCreateModalOpen] = useState(false)
+  const [isCreatingDemo, setIsCreatingDemo] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return window.localStorage.getItem('formflow-onboarding-dismissed') !== '1'
+  })
+
+  const dismissOnboarding = () => {
+    setShowOnboarding(false)
+    try {
+      window.localStorage.setItem('formflow-onboarding-dismissed', '1')
+    } catch {
+      // ignore
+    }
+  }
+
+  const createDemoForm = async () => {
+    setIsCreatingDemo(true)
+    try {
+      const demo = buildDemoForm()
+      const created = await createForm(demo)
+      toast.success('Formulaire exemple créé — modifiez-le comme vous voulez')
+      setTimeout(() => {
+        window.location.href = `/forms/${created.data.id}/edit`
+      }, 1200)
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Erreur lors de la création')
+    } finally {
+      setIsCreatingDemo(false)
+    }
+  }
 
   const fetchForms = async () => {
     setLoading(true)
@@ -286,6 +408,15 @@ export default function DashboardPage() {
   return (
     <AdminLayout title="Dashboard">
       <div className="space-y-6">
+        {/* Onboarding */}
+        {!isLoading && showOnboarding && (
+          <OnboardingBanner
+            onDismiss={dismissOnboarding}
+            onCreateDemo={createDemoForm}
+            isCreatingDemo={isCreatingDemo}
+          />
+        )}
+
         {/* Stats */}
         {!isLoading && forms.length > 0 && <StatsCards forms={forms} />}
 
@@ -297,35 +428,38 @@ export default function DashboardPage() {
               Gérez vos sondages et consultez les réponses
             </p>
           </div>
-          <Button onClick={() => setCreateModalOpen(true)} className="w-full sm:w-auto gap-2">
+          <Link
+            href="/forms/new"
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25 w-full sm:w-auto transition-all hover:shadow-xl hover:shadow-primary/30 gap-2"
+          >
             <Plus className="h-4 w-4" /> Nouveau formulaire
-          </Button>
+          </Link>
         </div>
 
         {/* Forms grid */}
-        {isLoading ? (
-          <LoadingSkeleton />
-        ) : forms.length === 0 ? (
-          <EmptyState onCreateClick={() => setCreateModalOpen(true)} />
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {forms.map((form) => (
-              <FormCard key={form.id} form={form} onRefresh={fetchForms} />
-            ))}
-          </div>
-        )}
+        <div role="status" aria-live="polite">
+          {isLoading ? (
+            <LoadingSkeleton />
+          ) : forms.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {forms.map((form) => (
+                <FormCard key={form.id} form={form} onRefresh={fetchForms} />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* FAB Mobile */}
-      <button
-        onClick={() => setCreateModalOpen(true)}
+      <Link
+        href="/forms/new"
+        aria-label="Créer un nouveau formulaire"
         className="fixed bottom-6 right-6 lg:hidden flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 hover:bg-primary/90 transition-all z-50 active:scale-95"
       >
         <Plus className="h-6 w-6" />
-      </button>
-
-      {/* Create Form Modal */}
-      <CreateFormModal open={createModalOpen} onOpenChange={setCreateModalOpen} />
+      </Link>
     </AdminLayout>
   )
 }

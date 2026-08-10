@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState, use } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import {
   BarChart,
   Bar,
@@ -36,7 +36,7 @@ import {
   Sparkles,
   Eye,
 } from 'lucide-react'
-import { getAnalytics, getResponses, getQuestionAnalytics, getQuestionInsights } from '@/lib/api'
+import { getAnalytics, getResponses, getQuestionInsights } from '@/lib/api'
 import { Analytics, Response, QuestionAnalytics, ChartData, QuestionInsight } from '@/types'
 import { AdminLayout } from '@/components/layout'
 import { Button } from '@/components/ui/button'
@@ -423,8 +423,8 @@ function QuestionAnalyticsCard({ analytics, formId }: { analytics: QuestionAnaly
   )
 }
 
-export default function AnalyticsPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params)
+export default function AnalyticsPage() {
+  const resolvedParams = useParams() as { id: string }
   const router = useRouter()
   const [analytics, setAnalytics] = useState<Analytics | null>(null)
   const [responses, setResponses] = useState<Response[]>([])
@@ -544,7 +544,7 @@ export default function AnalyticsPage({ params }: { params: Promise<{ id: string
 
   if (isLoading) {
     return (
-      <AdminLayout title="Analytics">
+      <AdminLayout title="Statistiques">
         <div className="space-y-4">
           <Skeleton className="h-8 w-48" />
           <div className="grid gap-4 sm:grid-cols-3">
@@ -566,7 +566,7 @@ export default function AnalyticsPage({ params }: { params: Promise<{ id: string
     (analytics.analytics.filter((a) => a.type === 'rating').length || 1)
 
   return (
-    <AdminLayout title="Analytics">
+    <AdminLayout title="Statistiques">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -596,7 +596,7 @@ export default function AnalyticsPage({ params }: { params: Promise<{ id: string
               href={`/forms/${resolvedParams.id}/insights`}
               className="inline-flex items-center justify-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-white hover:bg-primary/90 shadow-lg shadow-primary/25 transition-all"
             >
-              <Brain className="h-4 w-4 mr-2" /> Insights IA
+              <Brain className="h-4 w-4 mr-2" /> Analyse IA
             </Link>
           </div>
         </div>
@@ -622,8 +622,17 @@ export default function AnalyticsPage({ params }: { params: Promise<{ id: string
             color="green"
           />
           <StatCard
-            title="Taux complétion"
-            value={analytics.totalResponses > 0 ? '100%' : '0%'}
+            title="Dernière réponse"
+            value={
+              responses.length > 0
+                ? new Date(responses[0].submittedAt).toLocaleDateString('fr-FR', {
+                    day: 'numeric',
+                    month: 'short',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })
+                : '—'
+            }
             icon={FileText}
             color="orange"
           />
@@ -642,3 +651,4 @@ export default function AnalyticsPage({ params }: { params: Promise<{ id: string
     </AdminLayout>
   )
 }
+

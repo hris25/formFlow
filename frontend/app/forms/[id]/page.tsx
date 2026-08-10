@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState, use } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { QRCodeSVG } from 'qrcode.react'
 import {
   ArrowLeft,
@@ -352,8 +352,9 @@ function ActionCard({
   )
 }
 
-export default function FormDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params)
+export default function FormDetailPage() {
+  const params = useParams() as { id: string }
+  const resolvedParams = params
   const router = useRouter()
   const searchParams = useSearchParams()
   const [form, setForm] = useState<Form | null>(null)
@@ -509,14 +510,14 @@ export default function FormDetailPage({ params }: { params: Promise<{ id: strin
         <div className="grid gap-3 grid-cols-2 sm:grid-cols-3">
           <ActionCard
             icon={BarChart3}
-            title="Analytics"
+            title="Statistiques"
             description="Statistiques"
             onClick={() => router.push(`/forms/${form.id}/analytics`)}
             color="bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400"
           />
           <ActionCard
             icon={Brain}
-            title="Insights"
+            title="Analyse IA"
             description="Analyse IA"
             onClick={() => router.push(`/forms/${form.id}/insights`)}
             color="bg-purple-500/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400"
@@ -616,3 +617,4 @@ export default function FormDetailPage({ params }: { params: Promise<{ id: strin
     </AdminLayout>
   )
 }
+

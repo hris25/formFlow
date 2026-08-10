@@ -32,54 +32,58 @@ export function Header({ title }: HeaderProps) {
   const searchRef = useRef<HTMLDivElement>(null)
   const notifRef = useRef<HTMLDivElement>(null)
 
-  // Build notifications from forms data (frontend-only)
+  // Notifications construites à partir des réponses réellement reçues
+  const [notifSeenVersion, setNotifSeenVersion] = useState(0)
+
   const notifications = useMemo<Notification[]>(() => {
-    const notifs: Notification[] = []
-    const now = new Date()
+    if (typeof window === 'undefined') return []
 
-    forms.forEach((form) => {
-      const created = new Date(form.createdAt)
-      const diffHrs = (now.getTime() - created.getTime()) / (1000 * 60 * 60)
-
-      if (diffHrs < 24) {
-        notifs.push({
-          id: `new-${form.id}`,
-          title: 'Nouveau formulaire',
-          message: `"${form.title}" a été créé`,
-          time: created.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
-          read: false,
-          icon: FileText,
-          color: 'text-primary bg-primary/10',
-        })
+    // Cache le compteur vu par formulaire ; à la première visite, tout est considéré comme lu.
+    let seen: Record<string, number> = {}
+    try {
+      const raw = window.localStorage.getItem('formflow-notif-seen')
+      if (raw) {
+        seen = JSON.parse(raw)
+      } else {
+        forms.forEach((f) => { seen[f.id] = f._count?.responses || 0 })
+        window.localStorage.setItem('formflow-notif-seen', JSON.stringify(seen))
       }
+    } catch {
+      seen = {}
+    }
 
-      if ((form._count?.responses || 0) > 0) {
+    const notifs: Notification[] = []
+    forms.forEach((form) => {
+      const count = form._count?.responses || 0
+      const lastSeen = seen[form.id] ?? 0
+      const fresh = count - lastSeen
+      if (count > 0) {
         notifs.push({
           id: `resp-${form.id}`,
-          title: 'Réponses reçues',
-          message: `${form._count?.responses} réponse${(form._count?.responses || 0) > 1 ? 's' : ''} sur "${form.title}"`,
-          time: 'Récent',
-          read: true,
+          title: fresh > 0 ? 'Nouvelles réponses' : 'Réponses',
+          message: `${count} réponse${count > 1 ? 's' : ''} sur "${form.title}"${fresh > 0 ? ` (${fresh} nouvelle${fresh > 1 ? 's' : ''})` : ''}`,
+          time: fresh > 0 ? 'Depuis votre dernière visite' : '',
+          read: fresh <= 0,
           icon: CheckCircle2,
           color: 'text-green-600 dark:text-green-400 bg-green-500/10',
         })
       }
-
-      if (!form.isOpen) {
-        notifs.push({
-          id: `closed-${form.id}`,
-          title: 'Formulaire fermé',
-          message: `"${form.title}" est fermé`,
-          time: '',
-          read: true,
-          icon: Clock,
-          color: 'text-orange-500 dark:text-orange-400 bg-orange-500/10',
-        })
-      }
     })
 
-    return notifs.slice(0, 8)
-  }, [forms])
+    return notifs.slice(-8)
+  }, [forms, notifSeenVersion])
+
+  const markAllRead = () => {
+    if (typeof window === 'undefined') return
+    try {
+      const seen: Record<string, number> = {}
+      forms.forEach((f) => { seen[f.id] = f._count?.responses || 0 })
+      window.localStorage.setItem('formflow-notif-seen', JSON.stringify(seen))
+    } catch {
+      // ignore
+    }
+    setNotifSeenVersion((v) => v + 1)
+  }
 
   const unreadCount = notifications.filter((n) => !n.read).length
 
@@ -253,7 +257,12 @@ export function Header({ title }: HeaderProps) {
             variant="ghost"
             size="icon"
             className="relative"
-            onClick={() => { setNotifOpen(!notifOpen); setSearchOpen(false) }}
+            aria-label="Notifications"
+            onClick={() => {
+              if (!notifOpen) markAllRead()
+              setNotifOpen(!notifOpen)
+              setSearchOpen(false)
+            }}
           >
             <Bell className="h-5 w-5" />
             {unreadCount > 0 && (
@@ -277,6 +286,9 @@ export function Header({ title }: HeaderProps) {
                   <div className="p-6 text-center">
                     <Bell className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                     <p className="text-sm text-muted-foreground">Aucune notification</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Vous serez prévenu quand vos élèves répondront
+                    </p>
                   </div>
                 ) : (
                   notifications.map((notif) => {
