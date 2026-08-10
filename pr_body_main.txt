@@ -1,0 +1,10 @@
+This PR finalizes the styling fixes for the frontend using Tailwind v4 and Next.js 15.
+
+Key changes:
+- Resolved conflicts in root `package.json` for styling dependencies.
+- Migrated frontend configuration to the root directory for better alignment with the repository's current structure.
+- Configured PostCSS with `@tailwindcss/postcss` for Tailwind v4 compatibility.
+- Fixed `postcss.config.mjs` resolution issues.
+- Removed redundant `tailwind.config.ts` to prevent TypeScript errors.
+
+Verified with a clean production build (`npm run build`).
