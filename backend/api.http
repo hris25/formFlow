@@ -17,8 +17,8 @@
 # CHAPITRE 1 — AUTH
 # ============================================================
 
-
-
+###
+GET http://localhost:3000/ping
 
 ### 1.1 Inscription
 POST {{baseUrl}}/auth/register
