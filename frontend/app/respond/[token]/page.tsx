@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState, use, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState, useMemo } from 'react'
+import { useParams, useRouter } from 'next/navigation'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -32,6 +32,36 @@ const answerSchema = z.object({
 })
 
 type AnswerFormData = z.infer<typeof answerSchema>
+
+const draftKey = (token: string) => `formflow-draft-${token}`
+
+function loadDraft(token: string): Record<string, any> | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(draftKey(token))
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+function saveDraft(token: string, values: Record<string, any>) {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(draftKey(token), JSON.stringify(values))
+  } catch {
+    // stockage indisponible — on ignore silencieusement
+  }
+}
+
+function clearDraft(token: string) {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.removeItem(draftKey(token))
+  } catch {
+    // ignore
+  }
+}
 
 function ProgressBar({ current, total }: { current: number; total: number }) {
   const progress = total > 0 ? Math.round((current / total) * 100) : 0
@@ -233,8 +263,8 @@ function QuestionCard({
   )
 }
 
-export default function RespondPage({ params }: { params: Promise<{ token: string }> }) {
-  const resolvedParams = use(params)
+export default function RespondPage() {
+  const resolvedParams = useParams() as { token: string }
   const router = useRouter()
   const [form, setForm] = useState<Form | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -255,11 +285,15 @@ export default function RespondPage({ params }: { params: Promise<{ token: strin
       try {
         const response = await getPublicForm(resolvedParams.token)
         setForm(response.data)
+        const questionIds = new Set(response.data.questions.map((q: Form['questions'][0]) => q.id))
+        const draft = loadDraft(resolvedParams.token)
         setValue(
           'answers',
           response.data.questions.map((q: Form['questions'][0]) => ({
             questionId: q.id,
-            value: undefined,
+            ...(draft && draft[q.id] !== undefined && questionIds.has(q.id)
+              ? { value: draft[q.id] }
+              : { value: undefined }),
           }))
         )
       } catch (err: any) {
@@ -289,6 +323,14 @@ export default function RespondPage({ params }: { params: Promise<{ token: strin
       a.questionId === questionId ? { ...a, value } : a
     )
     setValue('answers', newAnswers)
+
+    const values: Record<string, any> = {}
+    newAnswers.forEach((a) => {
+      if (a.value !== undefined && a.value !== '' && a.value !== null) {
+        values[a.questionId] = a.value
+      }
+    })
+    saveDraft(resolvedParams.token, values)
   }
 
   const getAnswerValue = (questionId: string) => {
@@ -312,6 +354,7 @@ export default function RespondPage({ params }: { params: Promise<{ token: strin
     try {
       const validAnswers = data.answers.filter(a => a.questionId && a.value !== undefined) as { questionId: string; value: string | number | boolean | string[] }[]
       await submitResponse(resolvedParams.token, validAnswers)
+      clearDraft(resolvedParams.token)
       router.push(`/respond/${resolvedParams.token}/success`)
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Erreur lors de l\'envoi')
@@ -368,6 +411,10 @@ export default function RespondPage({ params }: { params: Promise<{ token: strin
           {form.description && (
             <p className="text-muted-foreground mt-2">{form.description}</p>
           )}
+          <p className="text-xs text-muted-foreground mt-3 flex items-center justify-center gap-1.5" role="status">
+            <span aria-hidden="true">💾</span>
+            Vos réponses sont sauvegardées automatiquement sur cet appareil
+          </p>
         </div>
 
         {/* Questions */}

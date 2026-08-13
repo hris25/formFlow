@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState, use } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
 import {
     ArrowLeft,
     Users,
@@ -27,7 +27,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -93,7 +93,7 @@ function ResponseDetailDialog({
             <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <Eye className="h-5 w-5 text-primary" /> Détail de la réponse
+                        <Eye className="h-5 w-5 text-primary" /> D�tail de la r�ponse
                     </DialogTitle>
                     <DialogDescription>
                         Soumise le{' '}
@@ -154,10 +154,10 @@ function ResponseRow({
         .map((a) => {
             if (a.question?.type === 'yes_no') return a.value === true ? 'Oui' : 'Non'
             if (a.question?.type === 'rating') return `${a.value}/5`
-            if (typeof a.value === 'string' && a.value.length > 25) return a.value.slice(0, 25) + '…'
+            if (typeof a.value === 'string' && a.value.length > 25) return a.value.slice(0, 25) + '�'
             return String(a.value)
         })
-        .join(' • ')
+        .join(' � ')
 
     return (
         <div
@@ -169,15 +169,15 @@ function ResponseRow({
                 #{index + 1}
             </div>
             <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{summary || 'Réponse'}</p>
+                <p className="text-sm font-medium truncate">{summary || 'R�ponse'}</p>
                 <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
                     <Calendar className="h-3 w-3" />
-                    {date} à {time}
+                    {date} � {time}
                 </p>
             </div>
             <div className="hidden sm:flex items-center gap-1.5">
                 <Badge variant="secondary" className="text-xs">
-                    {response.answers.length} réponse{response.answers.length > 1 ? 's' : ''}
+                    {response.answers.length} r�ponse{response.answers.length > 1 ? 's' : ''}
                 </Badge>
             </div>
             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -209,8 +209,8 @@ function ResponseRow({
     )
 }
 
-export default function ResponsesPage({ params }: { params: Promise<{ id: string }> }) {
-    const resolvedParams = use(params)
+export default function ResponsesPage() {
+    const resolvedParams = useParams() as { id: string }
     const router = useRouter()
     const [form, setForm] = useState<Form | null>(null)
     const [responses, setResponses] = useState<Response[]>([])
@@ -218,6 +218,8 @@ export default function ResponsesPage({ params }: { params: Promise<{ id: string
     const [dialogOpen, setDialogOpen] = useState(false)
     const [isLoading, setIsLoading] = useState(true)
     const [loadingDetail, setLoadingDetail] = useState(false)
+    const [responseToDelete, setResponseToDelete] = useState<string | null>(null)
+    const [isDeleting, setIsDeleting] = useState(false)
 
     useEffect(() => {
         const fetchData = async () => {
@@ -251,14 +253,22 @@ export default function ResponsesPage({ params }: { params: Promise<{ id: string
         }
     }
 
-    const handleDeleteResponse = async (responseId: string) => {
-        if (!confirm('Supprimer cette réponse ?')) return
+    const handleDeleteResponse = (responseId: string) => {
+        setResponseToDelete(responseId)
+    }
+
+    const performDeleteResponse = async () => {
+        if (!responseToDelete) return
+        setIsDeleting(true)
         try {
-            await deleteResponse(resolvedParams.id, responseId)
-            setResponses(responses.filter((r) => r.id !== responseId))
-            toast.success('Réponse supprimée')
+            await deleteResponse(resolvedParams.id, responseToDelete)
+            setResponses(responses.filter((r) => r.id !== responseToDelete))
+            toast.success('R�ponse supprim�e')
+            setResponseToDelete(null)
         } catch (error: any) {
             toast.error(error.response?.data?.message || 'Erreur')
+        } finally {
+            setIsDeleting(false)
         }
     }
 
@@ -279,17 +289,17 @@ export default function ResponsesPage({ params }: { params: Promise<{ id: string
         })
 
         const csv = Papa.unparse(csvData)
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
         const link = document.createElement('a')
         link.href = URL.createObjectURL(blob)
         link.download = `${form.title}-reponses.csv`
         link.click()
-        toast.success('Export CSV téléchargé')
+        toast.success('Export CSV t�l�charg�')
     }
 
     if (isLoading) {
         return (
-            <AdminLayout title="Réponses">
+            <AdminLayout title="R�ponses">
                 <div className="space-y-4">
                     <Skeleton className="h-8 w-48" />
                     <div className="grid gap-4 sm:grid-cols-3">
@@ -306,7 +316,7 @@ export default function ResponsesPage({ params }: { params: Promise<{ id: string
     if (!form) return null
 
     return (
-        <AdminLayout title="Réponses">
+        <AdminLayout title="R�ponses">
             <div className="space-y-6">
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -316,7 +326,7 @@ export default function ResponsesPage({ params }: { params: Promise<{ id: string
                         </Button>
                         <div>
                             <h1 className="text-xl font-semibold">{form.title}</h1>
-                            <p className="text-sm text-muted-foreground">Réponses individuelles</p>
+                            <p className="text-sm text-muted-foreground">R�ponses individuelles</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -324,7 +334,7 @@ export default function ResponsesPage({ params }: { params: Promise<{ id: string
                             <Download className="h-4 w-4 mr-2" /> CSV
                         </Button>
                         <Button variant="outline" onClick={() => router.push(`/forms/${resolvedParams.id}/analytics`)}>
-                            <BarChart3 className="h-4 w-4 mr-2" /> Analytics
+                            <BarChart3 className="h-4 w-4 mr-2" /> Statistiques
                         </Button>
                     </div>
                 </div>
@@ -338,7 +348,7 @@ export default function ResponsesPage({ params }: { params: Promise<{ id: string
                             </div>
                             <div>
                                 <p className="text-2xl font-bold">{responses.length}</p>
-                                <p className="text-sm text-muted-foreground">Réponses totales</p>
+                                <p className="text-sm text-muted-foreground">R�ponses totales</p>
                             </div>
                         </CardContent>
                     </Card>
@@ -365,9 +375,9 @@ export default function ResponsesPage({ params }: { params: Promise<{ id: string
                                             day: 'numeric',
                                             month: 'short',
                                         })
-                                        : '—'}
+                                        : '�'}
                                 </p>
-                                <p className="text-sm text-muted-foreground">Dernière réponse</p>
+                                <p className="text-sm text-muted-foreground">Derni�re r�ponse</p>
                             </div>
                         </CardContent>
                     </Card>
@@ -377,10 +387,10 @@ export default function ResponsesPage({ params }: { params: Promise<{ id: string
                 <Card className="border-0 shadow-sm">
                     <CardHeader>
                         <CardTitle className="text-base flex items-center gap-2">
-                            <Users className="h-5 w-5" /> Toutes les réponses
+                            <Users className="h-5 w-5" /> Toutes les r�ponses
                         </CardTitle>
                         <CardDescription>
-                            Cliquez sur une réponse pour voir le détail complet
+                            Cliquez sur une r�ponse pour voir le d�tail complet
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -389,9 +399,9 @@ export default function ResponsesPage({ params }: { params: Promise<{ id: string
                                 <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted mb-4">
                                     <Users className="h-7 w-7 text-muted-foreground" />
                                 </div>
-                                <h3 className="text-base font-semibold">Aucune réponse</h3>
+                                <h3 className="text-base font-semibold">Aucune r�ponse</h3>
                                 <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-                                    Partagez le lien de votre formulaire pour collecter des réponses.
+                                    Partagez le lien de votre formulaire pour collecter des r�ponses.
                                 </p>
                             </div>
                         ) : (
@@ -421,6 +431,27 @@ export default function ResponsesPage({ params }: { params: Promise<{ id: string
                     setSelectedResponse(null)
                 }}
             />
+
+            {/* Delete confirmation dialog */}
+            <Dialog open={responseToDelete !== null} onOpenChange={(open) => !open && setResponseToDelete(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Supprimer cette r�ponse ?</DialogTitle>
+                        <DialogDescription>
+                            Cette r�ponse sera d�finitivement supprim�e, sans possibilit� de la r�cup�rer.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setResponseToDelete(null)}>
+                            Annuler
+                        </Button>
+                        <Button type="button" variant="destructive" onClick={performDeleteResponse} disabled={isDeleting} className="gap-2">
+                            {isDeleting && <Loader2 className="h-4 w-4 animate-spin" />}
+                            Supprimer
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </AdminLayout>
     )
 }

@@ -126,7 +126,7 @@ export default function LoginPage() {
                 >
                   <div className="flex items-center justify-between">
                     <Label htmlFor="password" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground/80">Mot de passe</Label>
-                    <Link href="#" className="text-sm font-medium text-primary hover:text-primary/80 transition-colors">Oublié ?</Link>
+                    <span className="text-sm font-medium text-muted-foreground">Mot de passe oublié ? Contactez votre administrateur.</span>
                   </div>
                   <div className="relative group">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors group-focus-within:text-primary" />

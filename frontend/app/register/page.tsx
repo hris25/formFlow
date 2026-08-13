@@ -299,7 +299,7 @@ export default function RegisterPage() {
           >
             {[
               { icon: CheckCircle2, title: "Création Rapide", desc: "Formulaires prêts en moins de 2 minutes." },
-              { icon: BarChart, title: "Analytics Avancés", desc: "Visualisez et comprenez les données instantanément." },
+              { icon: BarChart, title: "Statistiques Avancées", desc: "Visualisez et comprenez les données instantanément." },
               { icon: ShieldCheck, title: "Gratuit & Sécurisé", desc: "Aucune carte bancaire requise, données protégées." }
             ].map((item, i) => (
               <div key={i} className="flex items-start gap-4 p-4 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10">

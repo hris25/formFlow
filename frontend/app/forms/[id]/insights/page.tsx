@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState, use } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
 import {
   BarChart,
   Bar,
@@ -208,8 +208,8 @@ function LoadingState() {
   )
 }
 
-export default function InsightsPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params)
+export default function InsightsPage() {
+  const resolvedParams = useParams() as { id: string }
   const router = useRouter()
   const [insights, setInsights] = useState<AIInsight | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -231,7 +231,7 @@ export default function InsightsPage({ params }: { params: Promise<{ id: string 
   }, [resolvedParams.id])
 
   return (
-    <AdminLayout title="Insights IA">
+    <AdminLayout title="Analyse IA">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
@@ -240,7 +240,7 @@ export default function InsightsPage({ params }: { params: Promise<{ id: string 
           </Button>
           <div>
             <h1 className="text-xl font-semibold flex items-center gap-2">
-              <Brain className="h-6 w-6 text-primary" /> Insights IA
+              <Brain className="h-6 w-6 text-primary" /> Analyse IA
             </h1>
             <p className="text-sm text-muted-foreground">Analyse intelligente des réponses</p>
           </div>
@@ -335,3 +335,4 @@ export default function InsightsPage({ params }: { params: Promise<{ id: string 
     </AdminLayout>
   )
 }
+
